@@ -291,8 +291,10 @@ void draw_floor()
 	glUseProgram(shader_base);
 	GLuint matrixpos = glGetUniformLocation(shader_base, "RotationMatrix");
 	GLuint lightingpos = glGetUniformLocation(shader_base, "EnableLighting");
+	GLuint texturingpos = glGetUniformLocation(shader_base, "EnableTexture");
 
 	glUniform1i(lightingpos, gLightingMode);
+	glUniform1i(texturingpos, gTextureMode);
 
 	glm::mat4 mat;
 
@@ -304,11 +306,6 @@ void draw_floor()
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
 	glEnable(GL_CULL_FACE);
-
-	if (gTextureMode)
-		glEnable(GL_TEXTURE_2D);
-	else
-		glDisable(GL_TEXTURE_2D);
 
 	glBindTexture(GL_TEXTURE_2D, tex_floor);
 
@@ -336,23 +333,16 @@ void draw_tree()
 	glUseProgram(shader_base);
 	GLuint matrixpos = glGetUniformLocation(shader_base, "RotationMatrix");
 	GLuint lightingpos = glGetUniformLocation(shader_base, "EnableLighting");
+	GLuint texturingpos = glGetUniformLocation(shader_base, "EnableTexture");
 
 	glUniform1i(lightingpos, gLightingMode);
+	glUniform1i(texturingpos, gTextureMode);
 
 	glm::mat4 mat;
 
 	mat = mat_proj * mat_modelview;
 
 	glUniformMatrix4fv(matrixpos, 1, GL_FALSE, &mat[0][0]);
-
-	if (gTextureMode)
-	{
-		glEnable(GL_TEXTURE_2D);
-	}
-	else
-	{
-		glDisable(GL_TEXTURE_2D);
-	}
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
