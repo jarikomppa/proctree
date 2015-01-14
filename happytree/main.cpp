@@ -33,7 +33,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-#define TITLE "HappyTree (Preview 1)"
+#define TITLE "HappyTree 20150114"
 
 void initvbos();
 
