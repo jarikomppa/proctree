@@ -202,6 +202,7 @@ int gTextureMode = 1;
 int gTwigMode = 1;
 int gWireframeMode = 0;
 int gLightingMode = 1;
+float gSkyColor[3] = { 0.1, 0.1, 0.2 };
 
 GLuint gVertVBO = 0;
 GLuint gNormalVBO = 0;
@@ -421,7 +422,7 @@ static void draw_screen()
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    glClearColor(0.1,0.1,0.2,1.0);
+    glClearColor(gSkyColor[0],gSkyColor[1],gSkyColor[2],1.0);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	if (gWireframeMode)
@@ -1154,6 +1155,7 @@ int main(int argc, char** args)
 	TwAddVarRW(gCommandBar, "Wireframe mode", TW_TYPE_BOOL32, &gWireframeMode, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Draw twigs", TW_TYPE_BOOL32, &gTwigMode, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Lighting", TW_TYPE_BOOL32, &gLightingMode, " group=rendering ");
+	TwAddVarRW(gCommandBar, "Sky color", TW_TYPE_COLOR3F, &gSkyColor, " group=rendering ");
 
 	TwDefine(" Commands size='250 500' position='700 10' "); // 960-260 = 700
 
