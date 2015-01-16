@@ -33,6 +33,8 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+//#define DEBUG_SHADOWMAPS
+
 #define TITLE "HappyTree 20150114"
 
 void init_gl_resources();
@@ -138,6 +140,9 @@ public:
 int tex_twig, tex_bark, tex_floor;
 
 Shader gBaseShader, gShadowpassShader;
+#ifdef DEBUG_SHADOWMAPS
+Shader gShadowDebugShader;
+#endif
 int gKeyState = 0;
 int gLastTick = 0;
 Proctree::Tree gTree;
@@ -359,16 +364,16 @@ void init_gl_resources()
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, RB_WIDTH, RB_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	/*
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);	
 	glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
-
+	*/
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, rb_shadow, 0);
 
 	glDrawBuffer(GL_NONE);
@@ -379,21 +384,111 @@ void init_gl_resources()
 
 	gBaseShader.build();
 	gShadowpassShader.build();
+#ifdef DEBUG_SHADOWMAPS
+	gShadowDebugShader.build();
+#endif
 }
 
 glm::mat4 mat_proj;
 glm::mat4 mat_modelview;
+glm::mat4 mat_shadow;
 
-void draw_floor()
+void calc_shadowmatrix()
 {
+	glm::mat4 bias = {
+		0.5, 0.0, 0.0, 0.0,
+		0.0, 0.5, 0.0, 0.0,
+		0.0, 0.0, 0.5, 0.0,
+		0.5, 0.5, 0.5, 1.0 };
+	mat_shadow = bias;
+	mat_shadow *= mat_proj;
+	mat_shadow *= mat_modelview;
+}
+
+void setup_shadow()
+{
+	gShadowpassShader.use();
+	GLuint texturepos = gShadowpassShader.uniformLocation("tex");
+	
+	glUniform1i(texturepos, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, rb_shadowfbo);
+
+	glViewport(0, 0, RB_WIDTH, RB_HEIGHT);
+
+	glClearDepth(1);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glCullFace(GL_FRONT);
+
+	mat_proj = glm::ortho<float>(-40, 40, -40, 40, 10, 100);
+		//glm::perspective((float)M_PI * 90.0f / 360.0f, 1.0f, 10.0f, 100.0f);
+
+	mat_modelview = glm::mat4();
+	int tick = 0;
+	mat_modelview *= glm::lookAt(
+		glm::vec3(20,20,0),
+		glm::vec3(0, 0, 0),
+		glm::vec3(0, 1, 0));
+
+	calc_shadowmatrix();
+}
+
+void setup_rendering(int tick)
+{
+#ifdef DESIRED_ASPECT
+	float aspect = DESIRED_ASPECT;
+	if (((float)gScreenWidth / gScreenHeight) > aspect)
+	{
+		float realx = gScreenHeight * aspect;
+		float extrax = gScreenWidth - realx;
+
+		glViewport(extrax / 2, 0, realx, gScreenHeight);
+	}
+	else
+	{
+		float realy = gScreenWidth / aspect;
+		float extray = gScreenHeight - realy;
+
+		glViewport(0, extray / 2, gScreenWidth, realy);
+	}
+#else
+	glViewport(0, 0, gScreenWidth, gScreenHeight);
+#endif
+
+	glCullFace(GL_BACK);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	gBaseShader.use();
-	GLuint matrixpos = gBaseShader.uniformLocation("RotationMatrix");
 	GLuint lightingpos = gBaseShader.uniformLocation("EnableLighting");
 	GLuint texturingpos = gBaseShader.uniformLocation("EnableTexture");
 	GLuint shadowingpos = gBaseShader.uniformLocation("EnableShadows");
+	GLuint shadowmatrixpos = gBaseShader.uniformLocation("ShadowMatrix");
+	GLuint texturepos = gBaseShader.uniformLocation("tex");
+	GLuint shadowmappos = gBaseShader.uniformLocation("shadowmap");
 	glUniform1i(lightingpos, gLightingMode);
 	glUniform1i(texturingpos, gTextureMode);
 	glUniform1i(shadowingpos, gShadowMode);
+	glUniform1i(texturepos, 0);
+	glUniform1i(shadowmappos, 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, rb_shadow);
+	glActiveTexture(GL_TEXTURE0);
+	glUniformMatrix4fv(shadowmatrixpos, 1, GL_FALSE, &mat_shadow[0][0]);
+
+	mat_proj = glm::perspective((float)M_PI * 60.0f / 360.0f, 4.0f / 3.0f, 1.0f, 1000.0f);
+
+	mat_modelview = glm::mat4();
+
+	float d = 20 + gForestMode * 20;
+	mat_modelview *= glm::lookAt(
+		glm::vec3(cos(tick * 0.0002f) * d, 4, sin(tick * 0.0002f) * d),
+		glm::vec3(0, 4, 0),
+		glm::vec3(0, 1, 0));
+
+}
+
+
+void draw_floor(Shader &shader)
+{
+	GLuint matrixpos = shader.uniformLocation("RotationMatrix");
 
 	glm::mat4 mat;
 
@@ -427,16 +522,9 @@ void draw_floor()
 
 }
 
-void draw_tree()
+void draw_tree(Shader &shader)
 {
-	gBaseShader.use();
-	GLuint matrixpos = gBaseShader.uniformLocation("RotationMatrix");
-	GLuint lightingpos = gBaseShader.uniformLocation("EnableLighting");
-	GLuint texturingpos = gBaseShader.uniformLocation("EnableTexture");
-	GLuint shadowingpos = gBaseShader.uniformLocation("EnableShadows");
-	glUniform1i(lightingpos, gLightingMode);
-	glUniform1i(texturingpos, gTextureMode);
-	glUniform1i(shadowingpos, gShadowMode);
+	GLuint matrixpos = shader.uniformLocation("RotationMatrix");
 
 	glm::mat4 mat;
 
@@ -489,9 +577,70 @@ void draw_tree()
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
-	glUseProgram(0);
-
 }
+
+#ifdef DEBUG_SHADOWMAPS
+void shadowmap_debug()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	gShadowDebugShader.use();
+	GLuint matrixpos = gShadowDebugShader.uniformLocation("RotationMatrix");
+	GLuint texpos = gShadowDebugShader.uniformLocation("tex");
+	glUniform1i(texpos, 0);
+	glm::mat4 mat;
+	glUniformMatrix4fv(matrixpos, 1, GL_FALSE, &mat[0][0]);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_TEXTURE_2D);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, rb_shadow);
+	
+	float coords[] =
+	{
+		0, 0, 0,
+		1, 0, 0,
+		0, 1, 0,
+		1, 1, 0
+	};
+	
+	float uvcoords[] =
+	{
+		0, 0, 
+		1, 0, 
+		0, 1, 
+		1, 1, 
+	};
+	GLuint vbo, vbouv;
+
+	glGenBuffers(1, &vbo);
+	glGenBuffers(1, &vbouv);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(float) * 3, coords, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, vbouv);
+	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(float) * 2, uvcoords, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, vbouv);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+
+	glDeleteBuffers(1, &vbo);
+	glDeleteBuffers(1, &vbouv);
+}
+#endif
 
 static void draw_screen()
 {
@@ -527,16 +676,6 @@ static void draw_screen()
 	if (gWireframeMode)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	mat_proj = glm::perspective((float)M_PI * 60.0f / 360.0f, 4.0f / 3.0f, 1.0f, 1000.0f);
-
-	mat_modelview = glm::mat4();
-
-	float d = 20 + gForestMode * 20;
-	mat_modelview *= glm::lookAt(
-		glm::vec3(cos(tick * 0.0002f) * d, 4, sin(tick * 0.0002f) * d),
-		glm::vec3(0, 4, 0), 
-		glm::vec3(0, 1, 0));
-
 
 	//gTree.mProperties.mSeed = tick;
 	gTree.generate(); 
@@ -560,34 +699,54 @@ static void draw_screen()
 		glBindBuffer(GL_ARRAY_BUFFER, gTwigFaceVBO);
 		glBufferData(GL_ARRAY_BUFFER, gTree.mTwigFaceCount * sizeof(int) * 3, gTree.mTwigFace, GL_STATIC_DRAW);
 	}
-
-	draw_floor();
-
-	if (gForestMode)
+	
+	int pass;
+	for (pass = 0; pass < 2; pass++)
 	{
-		srand(0);
-		for (i = 0; i < 100; i++)
+		if (pass == 0)
 		{
-			float xofs = (rand() % 1000) - 500;
-			float zofs = (rand() % 1000) - 500;
-			float l = sqrt(xofs*xofs + zofs*zofs);
-			xofs /= l;
-			zofs /= l;
-			l = (rand() % 1000) * 0.025f;
-			xofs *= l;
-			zofs *= l;
-			glm::mat4 temp = mat_modelview;
-			
-			glm::mat4 trans = glm::translate(glm::mat4(), glm::vec3(xofs, 0, zofs));
-			mat_modelview = mat_modelview * trans;
-			draw_tree();
-			mat_modelview = temp;
+			setup_shadow();
 		}
-	}
-	else
-	{
-		draw_tree();
-	}
+		else
+		{
+			setup_rendering(tick);
+		}
+
+		if (pass)
+		{
+			draw_floor(gBaseShader);
+		}
+
+		if (gForestMode)
+		{
+			srand(0);
+			for (i = 0; i < 100; i++)
+			{
+				float xofs = (rand() % 1000) - 500;
+				float zofs = (rand() % 1000) - 500;
+				float l = sqrt(xofs*xofs + zofs*zofs);
+				xofs /= l;
+				zofs /= l;
+				l = (rand() % 1000) * 0.025f;
+				xofs *= l;
+				zofs *= l;
+				glm::mat4 temp = mat_modelview;
+
+				glm::mat4 trans = glm::translate(glm::mat4(), glm::vec3(xofs, 0, zofs));
+				mat_modelview = mat_modelview * trans;
+				draw_tree(pass ? gBaseShader : gShadowpassShader);
+				mat_modelview = temp;
+			}
+		}
+		else
+		{
+			draw_tree(pass ? gBaseShader : gShadowpassShader);
+		}
+	}	
+
+#ifdef DEBUG_SHADOWMAPS
+	shadowmap_debug();
+#endif
 
 	TwDraw();
 
@@ -1166,6 +1325,9 @@ void initGraphicsAssets()
 	// keep shader sources in memory in case we need to re-build them on resize
 	gBaseShader.init("data/base.vs", "data/base.fs");
 	gShadowpassShader.init("data/shadowpass.vs", "data/shadowpass.fs");
+#ifdef DEBUG_SHADOWMAPS
+	gShadowDebugShader.init("data/shadowpass.vs", "data/shadowdebug.fs");
+#endif
 
 	init_gl_resources();
 }

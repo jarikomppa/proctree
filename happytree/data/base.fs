@@ -30,14 +30,15 @@ void main()
     {
         vec4 shadowcoord = ShadowMatrix * origcoord;
         shadowcoord /= shadowcoord.w;
-        float shadowdepth = texture2D(shadowmap, shadowcoord.st).z;
+        float shadowdepth = textureProj(shadowmap, shadowcoord.xyw);
         float shade = 1.0;
         shadowcoord.z += 0.05;
 
         if (shadowcoord.w > 0.0 && shadowdepth < shadowcoord.z)
         {
-            shade = 0.80;
+            shade = 0.70;
         }
+        s = vec4(shade,shade,shade,1);
     }
 
     else
