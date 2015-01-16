@@ -35,7 +35,7 @@
 
 #define TITLE "HappyTree 20150114"
 
-void initvbos();
+void init_gl_resources();
 
 // How big a twick difference is considered 'time warp', i.e. skip the time
 // (to avoid physics blowing up)
@@ -45,13 +45,99 @@ void initvbos();
 
 #define USE_PERFCOUNTERS
 
-int tex_twig, tex_bark, tex_floor;
-char *basevs_src;
-char *basefs_src; 
-int basevs_src_len;
-int basefs_src_len;
+char * loadfile(char *aFilename, int &aLen)
+{
+	// There's some bit of code that every programmer finds themselves rewriting over
+	// and over and over and OVER again. For myself, it's this. I've written this function
+	// innumerable times. Why can't "just give me the data" be in standard libraries?
+	FILE * f = fopen(aFilename, "rb");
+	if (!f)
+	{
+		aLen = 0;
+		return 0;
+	}
+	fseek(f, 0, SEEK_END);
+	aLen = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	char *buf = new char[aLen + 1];
+	buf[aLen] = 0;
+	fread(buf, 1, aLen, f);
+	fclose(f);
+	return buf;
+}
 
-GLuint shader_base;
+class Shader
+{
+public:
+	char *mVSSrc;
+	int mVSLen;
+	char *mFSSrc;
+	int mFSLen;
+	GLuint mShaderHandle;
+
+	Shader()
+	{
+		mVSSrc = 0;
+		mVSLen = 0;
+		mFSSrc = 0;
+		mFSLen = 0;
+	}
+
+	~Shader()
+	{
+		delete[] mFSSrc;
+		delete[] mVSSrc;
+	}
+
+	void init(char *aFilename_vs, char *aFilename_fs)
+	{
+		delete[] mVSSrc;
+		delete[] mFSSrc;
+		mVSSrc = loadfile(aFilename_vs, mVSLen);
+		mFSSrc = loadfile(aFilename_fs, mFSLen);
+	}
+
+	void build()
+	{
+		char *vs_src_p[1] = { mVSSrc };
+		char *fs_src_p[1] = { mFSSrc };
+
+		int vs_obj = glCreateShader(GL_VERTEX_SHADER);
+		glShaderSource(vs_obj, 1, (const char**)vs_src_p, &mVSLen);
+		glCompileShader(vs_obj);
+
+		int fs_obj = glCreateShader(GL_FRAGMENT_SHADER);
+		glShaderSource(fs_obj, 1, (const char**)fs_src_p, &mFSLen);
+		glCompileShader(fs_obj);
+
+		mShaderHandle = glCreateProgram();
+		glAttachShader(mShaderHandle, vs_obj);
+		glAttachShader(mShaderHandle, fs_obj);
+		glLinkProgram(mShaderHandle);
+		int status;
+		glGetProgramiv(mShaderHandle, GL_LINK_STATUS, &status);
+		if (status == GL_FALSE)
+		{
+			char temp[2048];
+			glGetProgramInfoLog(mShaderHandle, 2048, &status, temp);
+			MessageBoxA(NULL, temp, "Shader link failure", MB_ICONERROR);
+		}
+	}
+
+	void use()
+	{
+		glUseProgram(mShaderHandle);	
+	}
+
+	int uniformLocation(char *aName)
+	{
+		return glGetUniformLocation(mShaderHandle, aName);
+	}
+};
+
+int tex_twig, tex_bark, tex_floor;
+
+Shader gBaseShader, gShadowpassShader;
 int gKeyState = 0;
 int gLastTick = 0;
 Proctree::Tree gTree;
@@ -183,7 +269,7 @@ void process_events()
             gScreenWidth = event.resize.w;
             gScreenHeight = event.resize.h;
             initvideo(0);
-			initvbos();
+			init_gl_resources();
             break;
 
         }
@@ -202,6 +288,7 @@ int gTextureMode = 1;
 int gTwigMode = 1;
 int gWireframeMode = 0;
 int gLightingMode = 1;
+int gShadowMode = 1;
 float gSkyColor[3] = { 0.1, 0.1, 0.2 };
 
 GLuint gVertVBO = 0;
@@ -217,7 +304,12 @@ GLuint gFloorVertVBO = 0;
 GLuint gFloorNormalVBO = 0;
 GLuint gFloorUVVBO = 0;
 
-void initvbos()
+GLuint rb_shadowfbo, rb_shadow;
+#define RB_WIDTH 1024
+#define RB_HEIGHT 1024
+
+
+void init_gl_resources()
 {
 	gOldProp.mSeed = -1; // force regen
 	glGenBuffers(1, &gVertVBO);
@@ -258,30 +350,35 @@ void initvbos()
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-	char *basevs_src_p[1] = { basevs_src };
-	char *basefs_src_p[1] = { basefs_src };
+	// create a framebuffer object for shadows
+	glGenFramebuffersEXT(1, &rb_shadowfbo);
+	glBindFramebufferEXT(GL_FRAMEBUFFER, rb_shadowfbo);
 
-	int basevs_obj = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(basevs_obj, 1, (const char**)basevs_src_p, &basevs_src_len);
-	glCompileShader(basevs_obj);
+	glGenTextures(1, &rb_shadow);
+	glBindTexture(GL_TEXTURE_2D, rb_shadow);
 
-	int basefs_obj = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(basefs_obj, 1, (const char**)basefs_src_p, &basefs_src_len);
-	glCompileShader(basefs_obj);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, RB_WIDTH, RB_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 
-	shader_base = glCreateProgram();
-	glAttachShader(shader_base, basevs_obj);
-	glAttachShader(shader_base, basefs_obj);
-	glLinkProgram(shader_base);
-	int status;
-	glGetProgramiv(shader_base, GL_LINK_STATUS, &status);
-	if (status == GL_FALSE)
-	{
-		char temp[2048];
-		glGetProgramInfoLog(shader_base, 2048, &status, temp);
-		MessageBoxA(NULL, temp, "Shader link failure", MB_ICONERROR);
-	}
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
+	glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, rb_shadow, 0);
+
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glActiveTexture(GL_TEXTURE0);
+
+	gBaseShader.build();
+	gShadowpassShader.build();
 }
 
 glm::mat4 mat_proj;
@@ -289,13 +386,14 @@ glm::mat4 mat_modelview;
 
 void draw_floor()
 {
-	glUseProgram(shader_base);
-	GLuint matrixpos = glGetUniformLocation(shader_base, "RotationMatrix");
-	GLuint lightingpos = glGetUniformLocation(shader_base, "EnableLighting");
-	GLuint texturingpos = glGetUniformLocation(shader_base, "EnableTexture");
-
+	gBaseShader.use();
+	GLuint matrixpos = gBaseShader.uniformLocation("RotationMatrix");
+	GLuint lightingpos = gBaseShader.uniformLocation("EnableLighting");
+	GLuint texturingpos = gBaseShader.uniformLocation("EnableTexture");
+	GLuint shadowingpos = gBaseShader.uniformLocation("EnableShadows");
 	glUniform1i(lightingpos, gLightingMode);
 	glUniform1i(texturingpos, gTextureMode);
+	glUniform1i(shadowingpos, gShadowMode);
 
 	glm::mat4 mat;
 
@@ -331,13 +429,14 @@ void draw_floor()
 
 void draw_tree()
 {
-	glUseProgram(shader_base);
-	GLuint matrixpos = glGetUniformLocation(shader_base, "RotationMatrix");
-	GLuint lightingpos = glGetUniformLocation(shader_base, "EnableLighting");
-	GLuint texturingpos = glGetUniformLocation(shader_base, "EnableTexture");
-
+	gBaseShader.use();
+	GLuint matrixpos = gBaseShader.uniformLocation("RotationMatrix");
+	GLuint lightingpos = gBaseShader.uniformLocation("EnableLighting");
+	GLuint texturingpos = gBaseShader.uniformLocation("EnableTexture");
+	GLuint shadowingpos = gBaseShader.uniformLocation("EnableShadows");
 	glUniform1i(lightingpos, gLightingMode);
 	glUniform1i(texturingpos, gTextureMode);
+	glUniform1i(shadowingpos, gShadowMode);
 
 	glm::mat4 mat;
 
@@ -1056,37 +1155,19 @@ void TW_CALL command(void *clientData)
 	}
 }
 
-char * loadfile(char *aFilename, int &aLen)
-{
-	// There's some bit of code that every programmer finds themselves rewriting over
-	// and over and over and OVER again. For myself, it's this. I've written this function
-	// innumerable times. Why can't "just give me the data" be in standard libraries?
-	FILE * f = fopen(aFilename, "rb");
-	if (!f)
-	{
-		aLen = 0;
-		return 0;
-	}
-	fseek(f, 0, SEEK_END);
-	aLen = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	char *buf = new char[aLen + 1];
-	buf[aLen] = 0;
-	fread(buf, 1, aLen, f);
-	fclose(f);
-	return buf;
-}
 
 void initGraphicsAssets()
 {
+	// framework will take care of restoring textures on resize
 	tex_twig = load_texture("data/snappytwig.png");
 	tex_bark = load_texture("data/bark.jpg", 0);
 	tex_floor = load_texture("data/floor.png", 0);
 
-	basevs_src = loadfile("data/base.vs", basevs_src_len);
-	basefs_src = loadfile("data/base.fs", basefs_src_len);
+	// keep shader sources in memory in case we need to re-build them on resize
+	gBaseShader.init("data/base.vs", "data/base.fs");
+	gShadowpassShader.init("data/shadowpass.vs", "data/shadowpass.fs");
 
-	initvbos();
+	init_gl_resources();
 }
 
 int main(int argc, char** args)
@@ -1155,6 +1236,7 @@ int main(int argc, char** args)
 	TwAddVarRW(gCommandBar, "Wireframe mode", TW_TYPE_BOOL32, &gWireframeMode, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Draw twigs", TW_TYPE_BOOL32, &gTwigMode, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Lighting", TW_TYPE_BOOL32, &gLightingMode, " group=rendering ");
+	TwAddVarRW(gCommandBar, "Shadows", TW_TYPE_BOOL32, &gShadowMode, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Sky color", TW_TYPE_COLOR3F, &gSkyColor, " group=rendering ");
 
 	TwDefine(" Commands size='250 500' position='700 10' "); // 960-260 = 700
