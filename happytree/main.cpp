@@ -857,7 +857,7 @@ void TW_CALL command(void *clientData)
 				gTree.mProperties.mSeed = 262;
 				gTree.mProperties.mSegments = 6;
 				gTree.mProperties.mLevels = 5;
-				gTree.mProperties.mVMultiplier = 2.36f;
+				gTree.mProperties.mVMultiplier = 0.36f;
 				gTree.mProperties.mTwigScale = 0.39f;
 				gTree.mProperties.mInitialBranchLength = 0.49f;
 				gTree.mProperties.mLengthFalloffFactor = 0.85f;
@@ -1080,7 +1080,7 @@ char * loadfile(char *aFilename, int &aLen)
 void initGraphicsAssets()
 {
 	tex_twig = load_texture("data/snappytwig.png");
-	tex_bark = load_texture("data/snappybark.jpg", 0);
+	tex_bark = load_texture("data/bark.jpg", 0);
 	tex_floor = load_texture("data/floor.png", 0);
 
 	basevs_src = loadfile("data/base.vs", basevs_src_len);
@@ -1111,27 +1111,27 @@ int main(int argc, char** args)
 	TwAddVarRW(gTreeBar, "Random seed",          TW_TYPE_INT32, &gTree.mProperties.mSeed, " group=general min=0 max=10000");
 	TwAddVarRW(gTreeBar, "Branch segments",      TW_TYPE_INT32, &gTree.mProperties.mSegments, " group=general step=2 min=4 max=32");
 	TwAddVarRW(gTreeBar, "Branch levels", TW_TYPE_INT32, &gTree.mProperties.mLevels, " group=general min=3 step=1 max=32");
-	TwAddVarRW(gTreeBar, "Texture V multiplier", TW_TYPE_FLOAT, &gTree.mProperties.mVMultiplier, " group=general min=0.01 step=0.1 max=10");
-	TwAddVarRW(gTreeBar, "Twig scale",           TW_TYPE_FLOAT, &gTree.mProperties.mTwigScale, " group=general min=0.01 step=0.01 max=2");
+	TwAddVarRW(gTreeBar, "Trunk forks", TW_TYPE_INT32, &gTree.mProperties.mTreeSteps, " group=general min=0 step=1 max=32");
+	TwAddVarRW(gTreeBar, "Texture V multiplier", TW_TYPE_FLOAT, &gTree.mProperties.mVMultiplier, " group=general min=0.01 step=0.01 max=10");
+	TwAddVarRW(gTreeBar, "Twig scale",           TW_TYPE_FLOAT, &gTree.mProperties.mTwigScale, " group=general min=0.01 step=0.001 max=2");
 
-	TwAddVarRW(gTreeBar, "Initial length",       TW_TYPE_FLOAT, &gTree.mProperties.mInitialBranchLength, " group=branching min=0.01 step=0.1 max=5");
-	TwAddVarRW(gTreeBar, "Len falloff rate",     TW_TYPE_FLOAT, &gTree.mProperties.mLengthFalloffFactor, " group=branching min=0.01 step=0.1 max=1.5");
-	TwAddVarRW(gTreeBar, "Len falloff power",    TW_TYPE_FLOAT, &gTree.mProperties.mLengthFalloffPower, " group=branching min=-2 step=0.1 max=2");
-	TwAddVarRW(gTreeBar, "Max clumping",         TW_TYPE_FLOAT, &gTree.mProperties.mClumpMax, " group=branching min=0.01 step=0.1 max=10");
-	TwAddVarRW(gTreeBar, "Min clumping",         TW_TYPE_FLOAT, &gTree.mProperties.mClumpMin, " group=branching min=0.01 step=0.1 max=10");
-	TwAddVarRW(gTreeBar, "Symmetry",             TW_TYPE_FLOAT, &gTree.mProperties.mBranchFactor, " group=branching min=2 step=0.1 max=4");
-	TwAddVarRW(gTreeBar, "Droop",                TW_TYPE_FLOAT, &gTree.mProperties.mDropAmount, " group=branching min=-2 step=0.1 max=2");
-	TwAddVarRW(gTreeBar, "Growth",               TW_TYPE_FLOAT, &gTree.mProperties.mGrowAmount, " group=branching min=-4 step=0.1 max=4");
-	TwAddVarRW(gTreeBar, "Sweep",                TW_TYPE_FLOAT, &gTree.mProperties.mSweepAmount, " group=branching min=-1 step=0.1 max=1");
+	TwAddVarRW(gTreeBar, "Initial length",       TW_TYPE_FLOAT, &gTree.mProperties.mInitialBranchLength, " group=branching min=0.01 step=0.01 max=5");
+	TwAddVarRW(gTreeBar, "Len falloff rate",     TW_TYPE_FLOAT, &gTree.mProperties.mLengthFalloffFactor, " group=branching min=0.01 step=0.01 max=1.5");
+	TwAddVarRW(gTreeBar, "Len falloff power",    TW_TYPE_FLOAT, &gTree.mProperties.mLengthFalloffPower, " group=branching min=-2 step=0.01 max=2");
+	TwAddVarRW(gTreeBar, "Max clumping",         TW_TYPE_FLOAT, &gTree.mProperties.mClumpMax, " group=branching min=0.01 step=0.01 max=10");
+	TwAddVarRW(gTreeBar, "Min clumping",         TW_TYPE_FLOAT, &gTree.mProperties.mClumpMin, " group=branching min=0.01 step=0.01 max=10");
+	TwAddVarRW(gTreeBar, "Symmetry",             TW_TYPE_FLOAT, &gTree.mProperties.mBranchFactor, " group=branching min=2 step=0.01 max=4");
+	TwAddVarRW(gTreeBar, "Droop",                TW_TYPE_FLOAT, &gTree.mProperties.mDropAmount, " group=branching min=-2 step=0.01 max=2");
+	TwAddVarRW(gTreeBar, "Growth",               TW_TYPE_FLOAT, &gTree.mProperties.mGrowAmount, " group=branching min=-4 step=0.01 max=4");
+	TwAddVarRW(gTreeBar, "Sweep",                TW_TYPE_FLOAT, &gTree.mProperties.mSweepAmount, " group=branching min=-1 step=0.01 max=1");
 
-	TwAddVarRW(gTreeBar, "Trunk radius",         TW_TYPE_FLOAT, &gTree.mProperties.mMaxRadius, " group=trunk min=0.01 step=0.01 max=0.5");
-	TwAddVarRW(gTreeBar, "Radius falloff", TW_TYPE_FLOAT, &gTree.mProperties.mRadiusFalloffRate, " group=trunk min=0.1 step=0.1 max=1.0");
-	TwAddVarRW(gTreeBar, "Climb rate", TW_TYPE_FLOAT, &gTree.mProperties.mClimbRate, " group=trunk min=0.01 step=0.05 max=1.0");
-	TwAddVarRW(gTreeBar, "Kink",                 TW_TYPE_FLOAT, &gTree.mProperties.mTrunkKink, " group=trunk min=-2 step=0.1 max=2");
-	TwAddVarRW(gTreeBar, "Trunk forks",          TW_TYPE_INT32, &gTree.mProperties.mTreeSteps, " group=trunk min=0 step=1 max=32");
-	TwAddVarRW(gTreeBar, "Taper rate",           TW_TYPE_FLOAT, &gTree.mProperties.mTaperRate, " group=trunk min=0.5 step=0.1 max=2");
-	TwAddVarRW(gTreeBar, "Twists",               TW_TYPE_FLOAT, &gTree.mProperties.mTwistRate, " group=trunk min=0.01 step=0.1 max=10");
-	TwAddVarRW(gTreeBar, "Trunk length",         TW_TYPE_FLOAT, &gTree.mProperties.mTrunkLength, " group=trunk min=0.01 step=0.1 max=5");
+	TwAddVarRW(gTreeBar, "Trunk radius",         TW_TYPE_FLOAT, &gTree.mProperties.mMaxRadius, " group=trunk min=0.01 step=0.001 max=0.5");
+	TwAddVarRW(gTreeBar, "Radius falloff", TW_TYPE_FLOAT, &gTree.mProperties.mRadiusFalloffRate, " group=trunk min=0.1 step=0.01 max=1.0");
+	TwAddVarRW(gTreeBar, "Climb rate", TW_TYPE_FLOAT, &gTree.mProperties.mClimbRate, " group=trunk min=0.01 step=0.01 max=1.0");
+	TwAddVarRW(gTreeBar, "Kink",                 TW_TYPE_FLOAT, &gTree.mProperties.mTrunkKink, " group=trunk min=-2 step=0.01 max=2");
+	TwAddVarRW(gTreeBar, "Taper rate",           TW_TYPE_FLOAT, &gTree.mProperties.mTaperRate, " group=trunk min=0.5 step=0.01 max=2");
+	TwAddVarRW(gTreeBar, "Twists",               TW_TYPE_FLOAT, &gTree.mProperties.mTwistRate, " group=trunk min=0.01 step=0.01 max=10");
+	TwAddVarRW(gTreeBar, "Trunk length",         TW_TYPE_FLOAT, &gTree.mProperties.mTrunkLength, " group=trunk min=0.01 step=0.01 max=5");
 
 	TwDefine(" Tree size='250 500' position='10 10' ");
 

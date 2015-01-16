@@ -178,7 +178,7 @@ namespace Proctree
 		mSeed = 262;
 		mSegments = 6;
 		mLevels = 5;
-		mVMultiplier = 2.36f;
+		mVMultiplier = 0.36f;
 		mTwigScale = 0.39f;
 		mInitialBranchLength = 0.49f;
 		mLengthFalloffFactor = 0.85f;
