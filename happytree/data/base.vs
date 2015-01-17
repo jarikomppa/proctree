@@ -9,12 +9,12 @@ out vec2 texcoord;
 out vec4 origcoord;
 
 uniform mat4 RotationMatrix;
+uniform vec3 lightdir;
 uniform bool EnableLighting;
 
 void main()
 {
-    vec3 lightdir = vec3(2,-1,0);
-    float v = dot(vertexNormal,lightdir);
+    float v = dot(vertexNormal, lightdir);
     v = (v + 1) * 0.25 + 0.5;
     if (EnableLighting)
         color = vec3(v);

@@ -294,7 +294,9 @@ int gTwigMode = 1;
 int gWireframeMode = 0;
 int gLightingMode = 1;
 int gShadowMode = 1;
+int gAnimateLight = 1;
 float gSkyColor[3] = { 0.1, 0.1, 0.2 };
+glm::vec3 gLightDir = { 1, 1, 0 };
 
 GLuint gVertVBO = 0;
 GLuint gNormalVBO = 0;
@@ -364,8 +366,8 @@ void init_gl_resources()
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, RB_WIDTH, RB_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -393,6 +395,8 @@ glm::mat4 mat_proj;
 glm::mat4 mat_modelview;
 glm::mat4 mat_shadow;
 
+glm::vec2 gCamRotate = { 0, 0 };
+
 void calc_shadowmatrix()
 {
 	glm::mat4 bias = {
@@ -419,20 +423,21 @@ void setup_shadow()
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glCullFace(GL_FRONT);
 
-	mat_proj = glm::ortho<float>(-40, 40, -40, 40, 10, 100);
-		//glm::perspective((float)M_PI * 90.0f / 360.0f, 1.0f, 10.0f, 100.0f);
+	float d = 20 + gForestMode * 20;
+
+	mat_proj = glm::ortho<float>(-d, d, -d, d, 10, 100);
 
 	mat_modelview = glm::mat4();
 	int tick = 0;
 	mat_modelview *= glm::lookAt(
-		glm::vec3(20,20,0),
+		gLightDir * 20.0f,
 		glm::vec3(0, 0, 0),
 		glm::vec3(0, 1, 0));
 
 	calc_shadowmatrix();
 }
 
-void setup_rendering(int tick)
+void restore_viewport()
 {
 #ifdef DESIRED_ASPECT
 	float aspect = DESIRED_ASPECT;
@@ -453,6 +458,22 @@ void setup_rendering(int tick)
 #else
 	glViewport(0, 0, gScreenWidth, gScreenHeight);
 #endif
+}
+
+void setup_rendering(int tick)
+{
+	restore_viewport();
+
+	
+	int lt = tick;
+	if (!gAnimateLight)
+		lt = 0;
+
+	gLightDir.x = sin(lt * 0.00023);
+	gLightDir.z = cos(lt * 0.00023);
+	gLightDir.y = 1;
+	gLightDir = glm::normalize(gLightDir);
+
 
 	glCullFace(GL_BACK);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -463,6 +484,7 @@ void setup_rendering(int tick)
 	GLuint shadowmatrixpos = gBaseShader.uniformLocation("ShadowMatrix");
 	GLuint texturepos = gBaseShader.uniformLocation("tex");
 	GLuint shadowmappos = gBaseShader.uniformLocation("shadowmap");
+	GLuint lightdir = gBaseShader.uniformLocation("lightdir");
 	glUniform1i(lightingpos, gLightingMode);
 	glUniform1i(texturingpos, gTextureMode);
 	glUniform1i(shadowingpos, gShadowMode);
@@ -472,14 +494,17 @@ void setup_rendering(int tick)
 	glBindTexture(GL_TEXTURE_2D, rb_shadow);
 	glActiveTexture(GL_TEXTURE0);
 	glUniformMatrix4fv(shadowmatrixpos, 1, GL_FALSE, &mat_shadow[0][0]);
+	glUniform3fv(lightdir, 1, &gLightDir[0]);
 
 	mat_proj = glm::perspective((float)M_PI * 60.0f / 360.0f, 4.0f / 3.0f, 1.0f, 1000.0f);
 
 	mat_modelview = glm::mat4();
 
 	float d = 20 + gForestMode * 20;
+	glm::vec3 at = { cos(gCamRotate.x), cos(gCamRotate.y), sin(gCamRotate.x) };
+	at = glm::normalize(at) * d;
 	mat_modelview *= glm::lookAt(
-		glm::vec3(cos(tick * 0.0002f) * d, 4, sin(tick * 0.0002f) * d),
+		at,//glm::vec3(cos(tick * 0.0002f) * d, 4, sin(tick * 0.0002f) * d),
 		glm::vec3(0, 4, 0),
 		glm::vec3(0, 1, 0));
 
@@ -522,16 +547,8 @@ void draw_floor(Shader &shader)
 
 }
 
-void draw_tree(Shader &shader)
+void prep_draw_tree()
 {
-	GLuint matrixpos = shader.uniformLocation("RotationMatrix");
-
-	glm::mat4 mat;
-
-	mat = mat_proj * mat_modelview;
-
-	glUniformMatrix4fv(matrixpos, 1, GL_FALSE, &mat[0][0]);
-
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
@@ -542,7 +559,7 @@ void draw_tree(Shader &shader)
 	glEnableVertexAttribArray(2);
 
 	glBindTexture(GL_TEXTURE_2D, tex_bark);
-	
+
 	glBindBuffer(GL_ARRAY_BUFFER, gVertVBO);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, gNormalVBO);
@@ -551,32 +568,74 @@ void draw_tree(Shader &shader)
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gFaceVBO);
-	glDrawElements(GL_TRIANGLES, gTree.mFaceCount * 3, GL_UNSIGNED_INT, 0);
-	
-	if (gTwigMode)
-	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glDisable(GL_CULL_FACE);
-		glBindTexture(GL_TEXTURE_2D, tex_twig);
+}
 
-		//glDepthMask(GL_FALSE);
-
-		glBindBuffer(GL_ARRAY_BUFFER, gTwigVertVBO);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glBindBuffer(GL_ARRAY_BUFFER, gTwigNormalVBO);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glBindBuffer(GL_ARRAY_BUFFER, gTwigUVVBO);
-		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gTwigFaceVBO);
-		glDrawElements(GL_TRIANGLES, gTree.mTwigFaceCount * 3, GL_UNSIGNED_INT, 0);
-
-		glDepthMask(GL_TRUE);
-	}
+void finish_draw_tree()
+{
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
+}
+
+void draw_tree(Shader &shader)
+{
+	GLuint matrixpos = shader.uniformLocation("RotationMatrix");
+
+	glm::mat4 mat;
+
+	mat = mat_proj * mat_modelview;
+
+	glUniformMatrix4fv(matrixpos, 1, GL_FALSE, &mat[0][0]);
+
+	glDrawElements(GL_TRIANGLES, gTree.mFaceCount * 3, GL_UNSIGNED_INT, 0);
+
+}
+
+void prep_draw_twig()
+{
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
+	glBindTexture(GL_TEXTURE_2D, tex_twig);
+
+	//glDepthMask(GL_FALSE);
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, gTwigVertVBO);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, gTwigNormalVBO);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, gTwigUVVBO);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gTwigFaceVBO);
+}
+
+
+void draw_twig(Shader &shader)
+{
+	GLuint matrixpos = shader.uniformLocation("RotationMatrix");
+
+	glm::mat4 mat;
+
+	mat = mat_proj * mat_modelview;
+
+	glUniformMatrix4fv(matrixpos, 1, GL_FALSE, &mat[0][0]);
+
+	glDrawElements(GL_TRIANGLES, gTree.mTwigFaceCount * 3, GL_UNSIGNED_INT, 0);
+}
+
+
+void finish_draw_twig()
+{
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(2);
+	glEnable(GL_CULL_FACE);
+
 }
 
 #ifdef DEBUG_SHADOWMAPS
@@ -712,10 +771,12 @@ static void draw_screen()
 			setup_rendering(tick);
 		}
 
-		if (pass)
+		if (pass != 0)
 		{
 			draw_floor(gBaseShader);
 		}
+
+		prep_draw_tree();
 
 		if (gForestMode)
 		{
@@ -742,7 +803,54 @@ static void draw_screen()
 		{
 			draw_tree(pass ? gBaseShader : gShadowpassShader);
 		}
-	}	
+
+		finish_draw_tree();
+
+		if (gTwigMode)
+		{
+			glm::mat4 orig;
+			if (pass == 0)
+			{
+				// To reduce surface acne on the twigs, move them closer to the light on shadow pass..
+				orig = mat_modelview;
+				glm::vec3 xlate = glm::normalize(gLightDir) * 0.5f;
+				mat_modelview = glm::translate(mat_modelview, xlate);
+			}
+			prep_draw_twig();
+
+			if (gForestMode)
+			{
+				srand(0);
+				for (i = 0; i < 100; i++)
+				{
+					float xofs = (rand() % 1000) - 500;
+					float zofs = (rand() % 1000) - 500;
+					float l = sqrt(xofs*xofs + zofs*zofs);
+					xofs /= l;
+					zofs /= l;
+					l = (rand() % 1000) * 0.025f;
+					xofs *= l;
+					zofs *= l;
+					glm::mat4 temp = mat_modelview;
+
+					glm::mat4 trans = glm::translate(glm::mat4(), glm::vec3(xofs, 0, zofs));
+					mat_modelview = mat_modelview * trans;
+					draw_twig(pass ? gBaseShader : gShadowpassShader);
+					mat_modelview = temp;
+				}
+			}
+			else
+			{
+				draw_twig(pass ? gBaseShader : gShadowpassShader);
+			}
+
+			finish_draw_twig();
+			if (pass == 0)
+			{
+				mat_modelview = orig;
+			}
+		}
+	}
 
 #ifdef DEBUG_SHADOWMAPS
 	shadowmap_debug();
@@ -1399,6 +1507,7 @@ int main(int argc, char** args)
 	TwAddVarRW(gCommandBar, "Draw twigs", TW_TYPE_BOOL32, &gTwigMode, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Lighting", TW_TYPE_BOOL32, &gLightingMode, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Shadows", TW_TYPE_BOOL32, &gShadowMode, " group=rendering ");
+	TwAddVarRW(gCommandBar, "Animate light", TW_TYPE_BOOL32, &gAnimateLight, " group=rendering ");
 	TwAddVarRW(gCommandBar, "Sky color", TW_TYPE_COLOR3F, &gSkyColor, " group=rendering ");
 
 	TwDefine(" Commands size='250 500' position='700 10' "); // 960-260 = 700
