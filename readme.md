@@ -3,12 +3,17 @@
 This is a liberally licensed procedural tree generator in c++, along with an editor HappyTree.
 
 The procedural generation itself is a port from https://github.com/supereggbert/proctree.js/
-see http://snappytree.com for an online demonstration (with webgl).
+see http://snappytree.com for an online demonstration of the original proctree.js (with webgl).
 
 ## Binaries
 
 Download win32 binaries at:
-http://iki.fi/sol/zip/happytree_20150114.zip
+http://iki.fi/sol/zip/happytree_20150117.zip
+
+The happytree editor requires OpenGL 3.3, but seriously, who doesn't have that?
+
+Usage should be pretty intuitive, you can rotate the camera by dragging and
+zoom in and out with the mouse wheel.
 
 ## Motivation
 
@@ -41,7 +46,7 @@ The editor (HappyTree) has a bunch of dependencies:
 
 The ported proctree.cpp does not generate exactly the same output as the original proctree.js.
 This may be partially due to the different math accuracy used, but it's possible that I
-managed to slip a bug or two into the algorithm.
+managed to slip a bug or two into the algorithm. (Feel free to debug..)
 
 ## Anything else?
 

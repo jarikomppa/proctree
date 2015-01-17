@@ -35,7 +35,7 @@
 
 //#define DEBUG_SHADOWMAPS
 
-#define TITLE "HappyTree 20150114"
+#define TITLE "HappyTree 20150117"
 
 void init_gl_resources();
 
