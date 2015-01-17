@@ -224,60 +224,78 @@ void process_events()
     while (SDL_PollEvent(&event)) 
     {
 		if (!TwEventSDL(&event, SDL_MAJOR_VERSION, SDL_MINOR_VERSION))
-        switch (event.type) 
-        {
-        case SDL_KEYDOWN:
-            handle_key(event.key.keysym.sym, 1);
-			// If a key is pressed, report it to the widgets
-			gUIState.keyentered = event.key.keysym.sym;
-			gUIState.keymod = event.key.keysym.mod;
-			// if key is ASCII, accept it as character input
-			if ((event.key.keysym.unicode & 0xFF80) == 0)
-				gUIState.keychar = event.key.keysym.unicode & 0x7f;				
-            break;
-        case SDL_KEYUP:
-            handle_key(event.key.keysym.sym, 0);
-            break;
-        case SDL_MOUSEMOTION:
-			// update mouse position
-			gUIState.mousex = (event.motion.x * (float)DESIRED_WINDOW_WIDTH) / (float)gScreenWidth;
-			gUIState.mousey = (event.motion.y * (float)DESIRED_WINDOW_HEIGHT) / (float)gScreenHeight;
-            break;
-		case SDL_MOUSEBUTTONDOWN:
-			// update button down state if left-clicking
-			if (event.button.button == 1)
-            {
-				gUIState.mousedown = 1;
-			    gUIState.mousedownx = (event.motion.x * (float)DESIRED_WINDOW_WIDTH) / (float)gScreenWidth;
-			    gUIState.mousedowny = (event.motion.y * (float)DESIRED_WINDOW_HEIGHT) / (float)gScreenHeight;
-            }
-            if (event.button.button == 4)
-            {
-                gUIState.scroll = +1;
-            }
-            if (event.button.button == 5)
-            {
-                gUIState.scroll = -1;
-            }
-			break;
-		case SDL_MOUSEBUTTONUP:
-			// update button down state if left-clicking
-			if (event.button.button == 1)
-				gUIState.mousedown = 0;
-			break;
-        case SDL_QUIT:
-			TwTerminate();
-            SDL_Quit();
-            exit(0);
-            break;
-        case SDL_VIDEORESIZE:
-            gScreenWidth = event.resize.w;
-            gScreenHeight = event.resize.h;
-            initvideo(0);
-			init_gl_resources();
-            break;
+		{
+			switch (event.type)
+			{
+			case SDL_KEYDOWN:
+				handle_key(event.key.keysym.sym, 1);
+				// If a key is pressed, report it to the widgets
+				gUIState.keyentered = event.key.keysym.sym;
+				gUIState.keymod = event.key.keysym.mod;
+				// if key is ASCII, accept it as character input
+				if ((event.key.keysym.unicode & 0xFF80) == 0)
+					gUIState.keychar = event.key.keysym.unicode & 0x7f;
+				break;
+			case SDL_KEYUP:
+				handle_key(event.key.keysym.sym, 0);
+				break;
+			case SDL_MOUSEMOTION:
+				// update mouse position
+				gUIState.mousex = (event.motion.x * (float)DESIRED_WINDOW_WIDTH) / (float)gScreenWidth;
+				gUIState.mousey = (event.motion.y * (float)DESIRED_WINDOW_HEIGHT) / (float)gScreenHeight;
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				// update button down state if left-clicking
+				if (event.button.button == 1)
+				{
+					gUIState.mousedown = 1;
+					gUIState.mousedownx = (event.motion.x * (float)DESIRED_WINDOW_WIDTH) / (float)gScreenWidth;
+					gUIState.mousedowny = (event.motion.y * (float)DESIRED_WINDOW_HEIGHT) / (float)gScreenHeight;
+				}
+				if (event.button.button == 4)
+				{
+					gUIState.scroll = +1;
+				}
+				if (event.button.button == 5)
+				{
+					gUIState.scroll = -1;
+				}
+				break;
+			case SDL_MOUSEBUTTONUP:
+				// update button down state if left-clicking
+				if (event.button.button == 1)
+					gUIState.mousedown = 0;
+				break;
+			case SDL_QUIT:
+				TwTerminate();
+				SDL_Quit();
+				exit(0);
+				break;
+			case SDL_VIDEORESIZE:
+				gScreenWidth = event.resize.w;
+				gScreenHeight = event.resize.h;
+				initvideo(0);
+				init_gl_resources();
+				break;
 
-        }
+			}
+		}
+		else
+		{
+			switch (event.type)
+			{
+			case SDL_MOUSEMOTION:
+				// update mouse position
+				gUIState.mousex = (event.motion.x * (float)DESIRED_WINDOW_WIDTH) / (float)gScreenWidth;
+				gUIState.mousey = (event.motion.y * (float)DESIRED_WINDOW_HEIGHT) / (float)gScreenHeight;
+				break;
+			case SDL_MOUSEBUTTONUP:
+				// update button down state if left-clicking
+				if (event.button.button == 1)
+					gUIState.mousedown = 0;
+				break;
+			}
+		}
     }
 }
 
@@ -395,7 +413,7 @@ glm::mat4 mat_proj;
 glm::mat4 mat_modelview;
 glm::mat4 mat_shadow;
 
-glm::vec2 gCamRotate = { 0, 0 };
+glm::vec3 gCamRotate = { 0, 0.2, 20 };
 
 void calc_shadowmatrix()
 {
@@ -423,7 +441,7 @@ void setup_shadow()
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glCullFace(GL_FRONT);
 
-	float d = 20 + gForestMode * 20;
+	float d = gCamRotate.z + gForestMode * 20;
 
 	mat_proj = glm::ortho<float>(-d, d, -d, d, 10, 100);
 
@@ -500,8 +518,8 @@ void setup_rendering(int tick)
 
 	mat_modelview = glm::mat4();
 
-	float d = 20 + gForestMode * 20;
-	glm::vec3 at = { cos(gCamRotate.x), cos(gCamRotate.y), sin(gCamRotate.x) };
+	float d = gCamRotate.z + gForestMode * 20;
+	glm::vec3 at = { cos(gCamRotate.x), sin(gCamRotate.y), sin(gCamRotate.x) };
 	at = glm::normalize(at) * d;
 	mat_modelview *= glm::lookAt(
 		at,//glm::vec3(cos(tick * 0.0002f) * d, 4, sin(tick * 0.0002f) * d),
@@ -704,6 +722,31 @@ void shadowmap_debug()
 static void draw_screen()
 {
     int tick = SDL_GetTicks();
+
+	if (gUIState.mousedown)
+	{
+		float xdelta = gUIState.mousedownx - gUIState.mousex;
+		gUIState.mousedownx = gUIState.mousex;
+		gCamRotate.x += xdelta * -0.01f;
+
+		float ydelta = gUIState.mousedowny - gUIState.mousey;
+		gUIState.mousedowny = gUIState.mousey;
+		gCamRotate.y += ydelta * -0.01f;
+		if (gCamRotate.y < 0.02)
+			gCamRotate.y = 0.02;
+		if (gCamRotate.y > 1.5)
+			gCamRotate.y = 1.5;
+	}
+
+	if (gUIState.scroll)
+	{
+		gCamRotate.z += -gUIState.scroll;
+		if (gCamRotate.z < 5)
+			gCamRotate.z = 5;
+		if (gCamRotate.z > 40)
+			gCamRotate.z = 40;
+		gUIState.scroll = 0;
+	}
 
     int i;    
 

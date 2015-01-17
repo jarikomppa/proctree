@@ -73,7 +73,7 @@ void main()
     {
         vec4 shadowcoord = ShadowMatrix * origcoord;
         shadowcoord /= shadowcoord.w;
-        float shade = 16.0;
+        float shade = 0;
         for (int i=0;i<16;i++)
         {
             //int index = int(16.0*random(floor(origcoord.xyz*1000.0), i))%16;
@@ -81,7 +81,8 @@ void main()
             temp.xy += poissonDisk[i]/500.0;
             shade += getshadowsample(temp);
         }
-        shade /= 32.0;            
+        shade = shade / 16.0;
+        shade = (2.0 + shade) / 3.0;
          
         s = vec4(shade,shade,shade,1);
     }

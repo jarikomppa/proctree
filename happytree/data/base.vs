@@ -14,8 +14,8 @@ uniform bool EnableLighting;
 
 void main()
 {
-    float v = dot(vertexNormal, lightdir);
-    v = (v + 1) * 0.25 + 0.5;
+    float v = dot(normalize(vertexNormal), normalize(lightdir));
+    v = v * 0.5 + 1;
     if (EnableLighting)
         color = vec3(v);
     else
