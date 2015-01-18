@@ -37,6 +37,13 @@
 
 #define TITLE "HappyTree 20150117"
 
+#define MAXTEXTURES 64
+
+int gTwigTexture[MAXTEXTURES];
+int gTwigTextureCount = 0;
+int gTrunkTexture[MAXTEXTURES];
+int gTrunkTextureCount = 0;
+
 void init_gl_resources();
 
 // How big a twick difference is considered 'time warp', i.e. skip the time
@@ -46,6 +53,27 @@ void init_gl_resources();
 #define PHYSICS_FPS 100
 
 #define USE_PERFCOUNTERS
+
+void progress()
+{
+	static int lastprogresstick = 0;
+	int tick = SDL_GetTicks();
+	if (tick - lastprogresstick < (1000 / 20))
+		return;
+	lastprogresstick = tick;
+	float f = tick / 1000.0f;
+	glClearColor(0, 0, 0, 1);
+	glColor3f(1, 1, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBegin(GL_TRIANGLES);
+	glVertex2f(sin(f) * 0.1 + 0, cos(f) * 0.1 + 0); f += 3.14 * 4 / 3;
+	glVertex2f(sin(f) * 0.1 + 0, cos(f) * 0.1 + 0); f += 3.14 * 4 / 3;
+	glVertex2f(sin(f) * 0.1 + 0, cos(f) * 0.11 + 0);
+	glEnd();
+	SDL_GL_SwapBuffers();
+	
+}
+
 
 char * loadfile(char *aFilename, int &aLen)
 {
@@ -273,8 +301,9 @@ void process_events()
 				break;
 			case SDL_VIDEORESIZE:
 				gScreenWidth = event.resize.w;
-				gScreenHeight = event.resize.h;
+				gScreenHeight = event.resize.h;				
 				initvideo(0);
+				progress();
 				init_gl_resources();
 				break;
 
@@ -1465,13 +1494,84 @@ void TW_CALL command(void *clientData)
 	}
 }
 
+int imageExists(char *aBaseFilename, int aTwig)
+{
+	char *ext[] = { "TGA", "PNG", "JPG", "JPEG", "BMP", "PSD", "GIF", "HDR", "PIC" };
+	char temp[2048];
+	int i;
+	for (i = 0; i < sizeof(ext)/sizeof(char*); i++)
+	{
+		sprintf(temp, "%s.%s", aBaseFilename, ext[i]);
+		FILE * f = fopen(temp, "rb");
+		if (f)
+		{
+			fclose(f);
+			if (aTwig)
+			{
+				if (gTwigTextureCount < MAXTEXTURES)
+				{
+					gTwigTexture[gTwigTextureCount] = load_texture(temp);
+					gTwigTextureCount++;
+					progress();
+				}
+			}
+			else
+			{
+				if (gTrunkTextureCount < MAXTEXTURES)
+				{
+					gTrunkTexture[gTrunkTextureCount] = load_texture(temp, 0);
+					gTrunkTextureCount++;
+					progress();
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+void findtextures(char *aBaseDir, int aTwig)
+{
+	WIN32_FIND_DATAA fdFile;
+	HANDLE h = NULL;
+
+	char path[2048];
+	sprintf(path, "%s\\*.*", aBaseDir);
+
+	h = FindFirstFileA(path, &fdFile);
+
+	if (h == INVALID_HANDLE_VALUE)
+		return;
+
+	do
+	{
+		if (strcmp(fdFile.cFileName, ".") != 0 &&
+			strcmp(fdFile.cFileName, "..") != 0)
+		{
+			if (fdFile.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY)
+			{				
+				sprintf(path, "%s\\%s\\diffuse", aBaseDir, fdFile.cFileName);
+				imageExists(path, aTwig);
+			}
+		}
+	} 
+	while (FindNextFileA(h, &fdFile)); 
+
+	FindClose(h);
+
+}
+
 
 void initGraphicsAssets()
 {
 	// framework will take care of restoring textures on resize
 	tex_twig = load_texture("data/twig.png");
+	progress();
 	tex_bark = load_texture("data/bark.jpg", 0);
+	progress();
 	tex_floor = load_texture("data/floor.png", 0);
+
+	findtextures("data\\twig", 1);
+	findtextures("data\\trunk", 0);
 
 	// keep shader sources in memory in case we need to re-build them on resize
 	gBaseShader.init("data/base.vs", "data/base.fs");
@@ -1480,7 +1580,9 @@ void initGraphicsAssets()
 	gShadowDebugShader.init("data/shadowpass.vs", "data/shadowdebug.fs");
 #endif
 
+	progress();
 	init_gl_resources();
+	progress();
 }
 
 int main(int argc, char** args)
@@ -1493,6 +1595,11 @@ int main(int argc, char** args)
     }
 
     initvideo(argc);
+
+	// set window title
+	SDL_WM_SetCaption(TITLE " - http://iki.fi/sol/", NULL);
+
+	progress();
 
 	TwInit(TW_OPENGL, NULL);
 	TwWindowSize(gScreenWidth, gScreenHeight);
@@ -1555,6 +1662,7 @@ int main(int argc, char** args)
 
 	TwDefine(" Commands size='250 500' position='700 10' "); // 960-260 = 700
 
+	progress();
 	initGraphicsAssets();
 
 	// For imgui - Enable keyboard repeat to make sliders more tolerable
@@ -1563,8 +1671,6 @@ int main(int argc, char** args)
 	SDL_EnableUNICODE(1);
 
    
-    // set window title
-    SDL_WM_SetCaption(TITLE " - http://iki.fi/sol/", NULL);
 
 //	SDL_SetCursor(load_cursor("cursor_scissors.png",0,0));
     
