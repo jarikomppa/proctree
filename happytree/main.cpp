@@ -35,7 +35,7 @@
 
 //#define DEBUG_SHADOWMAPS
 
-#define TITLE "HappyTree 20150117"
+#define TITLE "HappyTree 20150118"
 
 #define MAXTEXTURES 64
 
@@ -43,6 +43,8 @@ int gTwigTexture[MAXTEXTURES];
 int gTwigTextureCount = 0;
 int gTrunkTexture[MAXTEXTURES];
 int gTrunkTextureCount = 0;
+int gTwigTextureIndex = -1;
+int gTrunkTextureIndex = -1;
 
 void init_gl_resources();
 
@@ -165,7 +167,7 @@ public:
 	}
 };
 
-int tex_twig, tex_bark, tex_floor;
+int tex_twig, tex_trunk, tex_floor;
 
 Shader gBaseShader, gShadowpassShader;
 #ifdef DEBUG_SHADOWMAPS
@@ -605,7 +607,7 @@ void prep_draw_tree()
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
 
-	glBindTexture(GL_TEXTURE_2D, tex_bark);
+	glBindTexture(GL_TEXTURE_2D, tex_trunk);
 
 	glBindBuffer(GL_ARRAY_BUFFER, gVertVBO);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -751,6 +753,22 @@ void shadowmap_debug()
 static void draw_screen()
 {
     int tick = SDL_GetTicks();
+
+	if (gTwigTextureIndex >= 0)
+	{
+		if (gTwigTextureIndex >= gTwigTextureCount)
+			gTwigTextureIndex = gTwigTextureCount - 1;
+		if (gTwigTextureIndex >= 0)
+			tex_twig = gTwigTexture[gTwigTextureIndex];
+	}
+
+	if (gTrunkTextureIndex >= 0)
+	{
+		if (gTrunkTextureIndex >= gTrunkTextureCount)
+			gTrunkTextureIndex = gTrunkTextureCount - 1;
+		if (gTrunkTextureIndex >= 0)
+			tex_trunk = gTrunkTexture[gTrunkTextureIndex];
+	}
 
 	if (gUIState.mousedown)
 	{
@@ -1200,7 +1218,8 @@ void TW_CALL command(void *clientData)
 
 		if (GetOpenFileNameA(&ofn))
 		{
-			tex_bark = load_texture(temp, 0);
+			tex_trunk = load_texture(temp, 0);
+			gTrunkTextureIndex = -1;
 		}
 	}
 
@@ -1226,6 +1245,7 @@ void TW_CALL command(void *clientData)
 		if (GetOpenFileNameA(&ofn))
 		{
 			tex_twig = load_texture(temp, 0);
+			gTwigTextureIndex = -1;
 		}
 	}
 
@@ -1566,7 +1586,7 @@ void initGraphicsAssets()
 	// framework will take care of restoring textures on resize
 	tex_twig = load_texture("data/twig.png");
 	progress();
-	tex_bark = load_texture("data/bark.jpg", 0);
+	tex_trunk = load_texture("data/bark.jpg", 0);
 	progress();
 	tex_floor = load_texture("data/floor.png", 0);
 
@@ -1584,6 +1604,7 @@ void initGraphicsAssets()
 	init_gl_resources();
 	progress();
 }
+
 
 int main(int argc, char** args)
 {
@@ -1639,8 +1660,10 @@ int main(int argc, char** args)
 	gCommandBar = TwNewBar("Commands");
 	TwAddButton(gCommandBar, "Save", command, CMD_SAVE, " group=project ");
 	TwAddButton(gCommandBar, "Load", command, CMD_LOAD, " group=project ");
-	TwAddButton(gCommandBar, "Load trunk texture", command, CMD_LOADTRUNKTEXTURE, " group=texture ");
-	TwAddButton(gCommandBar, "Load twig texture", command, CMD_LOADTWIGTEXTURE, " group=texture ");
+	TwAddVarRW(gCommandBar, "Twig texture", TW_TYPE_INT32, &gTwigTextureIndex, " group=texture min=0 step=1 ");
+	TwAddVarRW(gCommandBar, "Trunk texture", TW_TYPE_INT32, &gTrunkTextureIndex, " group=texture min=0 step=1 ");
+	TwAddButton(gCommandBar, "Load custom trunk texture", command, CMD_LOADTRUNKTEXTURE, " group=texture ");
+	TwAddButton(gCommandBar, "Load custom twig texture", command, CMD_LOADTWIGTEXTURE, " group=texture ");
 	TwAddButton(gCommandBar, "Load preset 1", command, CMD_RESET1, " group=presets ");
 	TwAddButton(gCommandBar, "Load preset 2", command, CMD_RESET2, " group=presets ");
 	TwAddButton(gCommandBar, "Load preset 3", command, CMD_RESET3, " group=presets ");

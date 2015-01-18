@@ -8,3 +8,5 @@ proctree/Release/
 happytree/Release/
 treegen.sdf
 Debug/
+happytree/data/trunk/
+happytree/data/twig/

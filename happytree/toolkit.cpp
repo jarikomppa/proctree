@@ -6,6 +6,8 @@ struct texpair
     const char *mFilename;
     GLuint mHandle;
     int mClamp;
+	int mWidth, mHeight;
+	unsigned char *mData;
 };
 
 int gScreenWidth = 0;
@@ -104,40 +106,47 @@ void initvideo(int argc)
 }
 
 
-static void do_loadtexture(const char * aFilename, int clamp = 1)
+static unsigned char * do_loadtexture(const char * aFilename, int &aWidth, int &aHeight, int clamp = 1, unsigned char *aData = 0)
 {
-    int i, j;
+	// Load texture using stb
+	unsigned char *data = NULL;
+	int i, j;
+	int w, h, n;
+	
+	if (!aData)
+	{
+		data = stbi_load(aFilename, &w, &h, &n, 4);
+		
+		if (data == NULL)
+			return 0;
 
-    // Load texture using stb
-	int x, y, n;
-	unsigned char *data = stbi_load(aFilename, &x, &y, &n, 4);
-    
-    if (data == NULL)
-        return;
+		unsigned int * src = (unsigned int*)data;
 
-    int l, w, h;
-    w = x;
-    h = y;
-    l = 0;
-    unsigned int * src = (unsigned int*)data;
-
-
-    // mark all pixels with alpha = 0 to black
-    for (i = 0; i < h; i++)
-    {
-        for (j = 0; j < w; j++)
-        {
-            if ((src[i * w + j] & 0xff000000) == 0)
-                src[i * w + j] = 0;
-        }
-    }
+		// mark all pixels with alpha = 0 to black
+		for (i = 0; i < h; i++)
+		{
+			for (j = 0; j < w; j++)
+			{
+				if ((src[i * w + j] & 0xff000000) == 0)
+					src[i * w + j] = 0;
+			}
+		}
+		aWidth = w;
+		aHeight = h;
+	}
+	else
+	{
+		data = aData;
+		w = aWidth;
+		h = aHeight;
+	}
 
     // Tell OpenGL to read the texture
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)src);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
-    // and cleanup.
-	stbi_image_free(data);
+    //// and cleanup.
+	//stbi_image_free(data);
 
     if (clamp)
     {
@@ -151,6 +160,7 @@ static void do_loadtexture(const char * aFilename, int clamp = 1)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     }
+	return data;
 }
 
 char * mystrdup(const char *aString)
@@ -178,18 +188,18 @@ GLuint load_texture(char * aFilename, int clamp)
     glGenTextures(1,&texname);
     glBindTexture(GL_TEXTURE_2D,texname);
 
-    do_loadtexture(aFilename, clamp);
-
-    gTextureStoreSize++;
+	gTextureStoreSize++;
 
 	texpair * t = (texpair *)realloc(gTextureStore, sizeof(texpair) * gTextureStoreSize);
 	if (t != NULL)
 	{
-	    gTextureStore = t;
-		gTextureStore[gTextureStoreSize-1].mFilename = mystrdup(aFilename);
-		gTextureStore[gTextureStoreSize-1].mHandle = texname;
-		gTextureStore[gTextureStoreSize-1].mClamp = clamp;
+		gTextureStore = t;
+		gTextureStore[gTextureStoreSize - 1].mFilename = mystrdup(aFilename);
+		gTextureStore[gTextureStoreSize - 1].mHandle = texname;
+		gTextureStore[gTextureStoreSize - 1].mClamp = clamp;
 	}
+	
+	gTextureStore[gTextureStoreSize - 1].mData = do_loadtexture(aFilename, gTextureStore[gTextureStoreSize - 1].mWidth, gTextureStore[gTextureStoreSize - 1].mHeight, clamp, 0);
 
     return texname;
 }
@@ -202,7 +212,11 @@ void reload_textures()
     for (i = 0; i < gTextureStoreSize; i++)
     {
         glBindTexture(GL_TEXTURE_2D, gTextureStore[i].mHandle);
-        do_loadtexture(gTextureStore[i].mFilename, gTextureStore[i].mClamp);
+		do_loadtexture(gTextureStore[i].mFilename,
+			gTextureStore[i].mWidth,
+			gTextureStore[i].mHeight,
+			gTextureStore[i].mClamp,
+			gTextureStore[i].mData);		            
 		progress();
     }
 }

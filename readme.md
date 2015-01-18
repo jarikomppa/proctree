@@ -8,12 +8,16 @@ see http://snappytree.com for an online demonstration of the original proctree.j
 ## Binaries
 
 Download win32 binaries at:
-http://iki.fi/sol/zip/happytree_20150117.zip
+http://iki.fi/sol/zip/happytree_20150118.zip
+
+Additional (not mandatory) 400 megs of trunk / twig textures
+http://iki.fi/sol/zip/happytree_20150118_tex.zip
+
+If you opt to download the additional textures, just unzip both zips in the same place. HappyTree will work without the additional textures (it'll actually be faster), so if you're just trying it out, I recommend NOT downloading the additional stuff. All of the textures are CC0 / public domain material (primarily, if not completely, by nobiax.deviantart.com). The additional textures do let you make more varieties of trees though; the base package only comes with one trunk and twig texture.
 
 The happytree editor requires OpenGL 3.3, but seriously, who doesn't have that?
 
-Usage should be pretty intuitive, you can rotate the camera by dragging and
-zoom in and out with the mouse wheel.
+Usage should be pretty intuitive, you can rotate the camera by dragging and zoom in and out with the mouse wheel.
 
 ## Motivation
 

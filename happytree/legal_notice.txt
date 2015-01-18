@@ -1,9 +1,4 @@
-Image snappytwig taken from:
-https://github.com/supereggbert/SnappyTree/tree/master/images
-
-** Note that it's legal status is uncertain, so you'll need to supply your own textures.
-
-the bark.jpg is cc0 / public domain.
+The bark, twig and floor textures are cc0 / public domain.
 
 --
 
