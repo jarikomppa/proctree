@@ -1469,7 +1469,7 @@ void TW_CALL command(void *clientData)
 void initGraphicsAssets()
 {
 	// framework will take care of restoring textures on resize
-	tex_twig = load_texture("data/snappytwig.png");
+	tex_twig = load_texture("data/twig.png");
 	tex_bark = load_texture("data/bark.jpg", 0);
 	tex_floor = load_texture("data/floor.png", 0);
 
