@@ -1496,7 +1496,7 @@ void TW_CALL command(void *clientData)
 
 int imageExists(char *aBaseFilename, int aTwig)
 {
-	char *ext[] = { "TGA", "PNG", "JPG", "JPEG", "BMP", "PSD", "GIF", "HDR", "PIC" };
+	char *ext[] = { "TGA", "PNG", "JPG", "JPEG", "BMP", "PSD", "GIF", "HDR", "PIC", "PPM", "PGM"};
 	char temp[2048];
 	int i;
 	for (i = 0; i < sizeof(ext)/sizeof(char*); i++)
