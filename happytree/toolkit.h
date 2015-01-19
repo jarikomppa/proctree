@@ -9,8 +9,6 @@
 #define DESIRED_WINDOW_WIDTH (1920/2)
 // For windowed mode
 #define DESIRED_WINDOW_HEIGHT (1080/2)
-// Desired aspect ratio. 640x480 = 4/3. Comment out to use whatever the desktop is set.
-#define DESIRED_ASPECT ((float)(DESIRED_WINDOW_WIDTH)/(float)(DESIRED_WINDOW_HEIGHT))
 
 //#define FULLSCREEN_BY_DEFAULT
 
@@ -89,6 +87,7 @@ struct UIState
 {
 	int mousex;
 	int mousey;
+	int not_imgui_mousedown;
 	int mousedown;
 
     int mousedownx;

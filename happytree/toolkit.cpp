@@ -12,7 +12,7 @@ struct texpair
 
 int gScreenWidth = 0;
 int gScreenHeight = 0;
-UIState gUIState = {0,0,0,0,0,0,0,0,0,0};
+UIState gUIState = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 texpair * gTextureStore = NULL;
 int gTextureStoreSize = 0;
 
@@ -82,25 +82,7 @@ void initvideo(int argc)
         exit(0);
     }
    
-#ifdef DESIRED_ASPECT
-    float aspect = DESIRED_ASPECT;
-    if (((float)gScreenWidth / gScreenHeight) > aspect)
-    {
-        float realx = gScreenHeight * aspect;
-        float extrax = gScreenWidth - realx;
-
-        glViewport( extrax / 2, 0, realx, gScreenHeight );
-    }
-    else
-    {
-        float realy = gScreenWidth / aspect;
-        float extray = gScreenHeight - realy;
-
-        glViewport( 0, extray / 2, gScreenWidth, realy );
-    }
-#else
     glViewport( 0, 0, gScreenWidth, gScreenHeight );
-#endif
 
     reload_textures();    
 }
