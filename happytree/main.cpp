@@ -82,7 +82,7 @@ int inEditor()
 		return 1;
 
 	w = gScreenWidth / 5;
-	if (w < 240) w = 240;
+	if (w < 200) w = 200;
 	w = gScreenWidth - (gScreenWidth / 5);
 	if (gUIState.mousex > w && ImGui::IsMouseHoveringAnyWindow())
 		return 1;
@@ -912,8 +912,6 @@ void draw_imgui()
 {
 	UpdateImGui();
 
-	ImVec2 previewsize(200, 200);
-
 	bool yah = true;
 	ImGui::GetStyle().FramePadding = { 0, 0 };
 	ImGui::GetStyle().WindowPadding = { 8, 4 };
@@ -1190,7 +1188,9 @@ void draw_imgui()
 	ImGui::End();
 
 	w = gScreenWidth / 5;
-	if (w < 240) w = 240;
+	if (w < 200) w = 200;
+	ImVec2 previewsize(w-50, w-50);
+
 	ImGui::SetNextWindowPos({ gScreenWidth - w, 0 });
 	ImGui::SetNextWindowSize({ w, (float)gScreenHeight });
 	ImGui::Begin("Content browser", &yah, ImVec2(0, 0), 0.2f, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
@@ -1650,6 +1650,7 @@ void draw_screen()
 	shadowmap_debug();
 #endif
 
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	ImGui::Render();
 
     //SDL_Delay(10);
