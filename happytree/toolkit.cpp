@@ -92,37 +92,12 @@ static unsigned char * do_loadtexture(const char * aFilename, int &aWidth, int &
 {
 	// Load texture using stb
 	unsigned char *data = NULL;
-	int i, j;
-	int w, h, n;
+	int w, h;
 	
-	if (!aData)
-	{
-		data = stbi_load(aFilename, &w, &h, &n, 4);
-		
-		if (data == NULL)
-			return 0;
-
-		unsigned int * src = (unsigned int*)data;
-
-		// mark all pixels with alpha = 0 to black
-		for (i = 0; i < h; i++)
-		{
-			for (j = 0; j < w; j++)
-			{
-				if ((src[i * w + j] & 0xff000000) == 0)
-					src[i * w + j] = 0;
-			}
-		}
-		aWidth = w;
-		aHeight = h;
-	}
-	else
-	{
-		data = aData;
-		w = aWidth;
-		h = aHeight;
-	}
-
+	data = aData;
+	w = aWidth;
+	h = aHeight;
+	
     // Tell OpenGL to read the texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data);
 	glGenerateMipmap(GL_TEXTURE_2D);
@@ -157,8 +132,8 @@ char * mystrdup(const char *aString)
 GLuint load_texture(char * aFilename, int clamp)
 {
     // First check if we have loaded this texture already
-    int i;
-    for (i = 0; i < gTextureStoreSize; i++)
+	int i, j, w, h, n;
+	for (i = 0; i < gTextureStoreSize; i++)
     {
         if (stricmp(gTextureStore[i].mFilename, aFilename) == 0)
             return gTextureStore[i].mHandle;
@@ -181,25 +156,52 @@ GLuint load_texture(char * aFilename, int clamp)
 		gTextureStore[gTextureStoreSize - 1].mClamp = clamp;
 	}
 	
-	gTextureStore[gTextureStoreSize - 1].mData = do_loadtexture(aFilename, gTextureStore[gTextureStoreSize - 1].mWidth, gTextureStore[gTextureStoreSize - 1].mHeight, clamp, 0);
 
-    return texname;
+	gTextureStore[gTextureStoreSize - 1].mData = stbi_load(aFilename, &w, &h, &n, 4);
+
+	unsigned int * src = (unsigned int*)gTextureStore[gTextureStoreSize - 1].mData;
+
+	// mark all pixels with alpha = 0 to black
+	for (i = 0; i < h; i++)
+	{
+		for (j = 0; j < w; j++)
+		{
+			if ((src[i * w + j] & 0xff000000) == 0)
+				src[i * w + j] = 0;
+		}
+	}
+	
+	gTextureStore[gTextureStoreSize - 1].mWidth = w;
+	gTextureStore[gTextureStoreSize - 1].mHeight = h;
+
+	return texname;
 }
 
-extern void progress();
-void reload_textures()
+int gLazyLoadIndex = 0;
+void lazyTextureLoad()
 {
-    // bind the textures to the same texture names as the last time.
-    int i;
-    for (i = 0; i < gTextureStoreSize; i++)
-    {
-        glBindTexture(GL_TEXTURE_2D, gTextureStore[i].mHandle);
+	int j;
+	for (j = 0; j < 5; j++)
+	{
+		if (gLazyLoadIndex >= gTextureStoreSize)
+			return;
+		int i = gLazyLoadIndex;
+		glBindTexture(GL_TEXTURE_2D, gTextureStore[i].mHandle);
 		do_loadtexture(gTextureStore[i].mFilename,
 			gTextureStore[i].mWidth,
 			gTextureStore[i].mHeight,
 			gTextureStore[i].mClamp,
-			gTextureStore[i].mData);		            
-		progress();
-    }
+			gTextureStore[i].mData);
+		gLazyLoadIndex++;
+	}
+}
+
+void reload_textures()
+{
+	gLazyLoadIndex = 0;
+	int i;
+	GLuint dummy;
+	for (i = 0; i < gTextureStoreSize; i++)
+		glGenTextures(1, &dummy);
 }
 

@@ -502,7 +502,6 @@ void process_events()
 			gScreenWidth = event.resize.w;
 			gScreenHeight = event.resize.h;				
 			initvideo(0);
-			progress();
 			init_gl_resources();
 			break;
 		}
@@ -591,7 +590,8 @@ void init_gl_resources()
 	glGenFramebuffersEXT(1, &rb_shadowfbo);
 	glBindFramebufferEXT(GL_FRAMEBUFFER, rb_shadowfbo);
 
-	glGenTextures(1, &rb_shadow);
+	if (!rb_shadow)
+		glGenTextures(1, &rb_shadow);
 	glBindTexture(GL_TEXTURE_2D, rb_shadow);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, RB_WIDTH, RB_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
@@ -1447,9 +1447,13 @@ void draw_imgui()
 	ImGui::End();
 }
 
+void lazyTextureLoad();
+
 void draw_screen()
 {
     int tick = SDL_GetTicks();
+
+	lazyTextureLoad();
 
 	if (gTwigTextureIndex >= 0)
 	{

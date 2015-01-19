@@ -132,7 +132,14 @@ static void LoadFontsTexture()
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
 	GLuint tex_id;
-	glGenTextures(1, &tex_id);
+	if (io.Fonts->TexID)
+	{
+		tex_id = (int)io.Fonts->TexID;
+	}
+	else
+	{
+		glGenTextures(1, &tex_id);
+	}
 	glBindTexture(GL_TEXTURE_2D, tex_id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
