@@ -1418,6 +1418,11 @@ void draw_imgui()
 
 	if (ImGui::TreeNode("Twig texture"))
 	{
+		if (gTwigTextureCount == 0)
+		{
+			ImGui::Text("No textures found");
+			ImGui::Text("under data/twig/");
+		}
 		int i;
 		for (i = 0; i < gTwigTextureCount; i++)
 		{
@@ -1432,6 +1437,11 @@ void draw_imgui()
 
 	if (ImGui::TreeNode("Trunk texture"))
 	{
+		if (gTrunkTextureCount == 0)
+		{
+			ImGui::Text("No textures found");
+			ImGui::Text("under data/trunk/");
+		}
 		int i;
 		for (i = 0; i < gTrunkTextureCount; i++)
 		{

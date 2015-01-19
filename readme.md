@@ -8,7 +8,7 @@ see http://snappytree.com for an online demonstration of the original proctree.j
 ## Binaries
 
 Download win32 binaries at:
-http://iki.fi/sol/zip/happytree_20150118.zip
+http://iki.fi/sol/zip/happytree_20150119.zip
 
 Additional (not mandatory) 400 megs of trunk / twig textures
 http://iki.fi/sol/zip/happytree_20150118_tex.zip
@@ -42,8 +42,8 @@ The editor (HappyTree) has a bunch of dependencies:
   - GLee opengl extension library (included)
   - stb_image image loading library (included)
   - My modified opengl framework (included)
+  - Ocornut's ImGui library (included)
   - SDL 1.2 cross-platform library
-  - AntTweakBar easy tweak UI
   - glm gl math library
   
 ## Notes
