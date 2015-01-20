@@ -12,15 +12,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\proctree\proctree.cpp" />
+    <ClCompile Include="diskio.cpp" />
     <ClCompile Include="GLee.c" />
+    <ClCompile Include="glstuff.cpp" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_impl.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="presets.cpp" />
+    <ClCompile Include="shader.cpp" />
     <ClCompile Include="stb_image.c" />
     <ClCompile Include="toolkit.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GLee.h" />
+    <ClInclude Include="happytree.h" />
+    <ClInclude Include="shader.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="toolkit.h" />
   </ItemGroup>
