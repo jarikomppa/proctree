@@ -288,7 +288,7 @@ void draw_imgui()
 	{                  
 		ImGui::InputInt("Random seed", &gTree.mProperties.mSeed);
 		ImGui::InputInt("Branch segments", &gTree.mProperties.mSegments, 2);
-		CLAMP(gTree.mProperties.mSegments, 4, 32);	
+		CLAMP(gTree.mProperties.mSegments, 2, 32);	
 		ImGui::InputInt("Branch levels", &gTree.mProperties.mLevels);
 		CLAMP(gTree.mProperties.mLevels, 3, 32);
 		ImGui::InputInt("Trunk forks", &gTree.mProperties.mTreeSteps);
@@ -740,7 +740,6 @@ void initGraphicsAssets()
 	progress();
 	tex_floor = load_texture("data/floor.png", 0);
 	progress();
-
 	tex_preset[0] = load_texture("data/preset1.jpg");
 	progress();
 	tex_preset[1] = load_texture("data/preset2.jpg");
@@ -756,7 +755,6 @@ void initGraphicsAssets()
 	tex_preset[6] = load_texture("data/preset7.jpg");
 	progress();
 	tex_preset[7] = load_texture("data/preset8.jpg");
-
 
 	findtextures("data\\twig", 1);
 	findtextures("data\\trunk", 0);

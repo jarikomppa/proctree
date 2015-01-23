@@ -133,6 +133,7 @@ namespace Proctree
 		void doFaces(Branch *aBranch);
 		void createTwigs(Branch *aBranch);
 		void createForks(Branch *aBranch, float aRadius);
+		void fixUVs();
 	public:
 		Properties mProperties;
 		int mVertCount;

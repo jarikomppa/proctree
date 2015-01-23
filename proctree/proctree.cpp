@@ -436,8 +436,177 @@ namespace Proctree
 		allocFaceBuffers();
 		doFaces(0);
 		calcNormals();
+		fixUVs();
 		delete mRoot;
 		mRoot = 0;
+	}
+
+	void Tree::fixUVs()
+	{
+		// There'll never be more than 50% bad vertices
+		int *badverttable = new int[mVertCount / 2];
+		int i;
+		int badverts = 0;
+
+		// step 1: find bad verts
+		// - If edge's U coordinate delta is over 0.5, texture has wrapped around. 
+		// - The vertex that has zero U is the wrong one
+		// - Care needs to be taken not to tag bad vertex more than once.
+
+		for (i = 0; i < mFaceCount; i++)
+		{
+			// x/y edges (vertex 0 and 1)
+			if ((fabs(mUV[mFace[i].x].u - mUV[mFace[i].y].u) > 0.5f) && (mUV[mFace[i].x].u == 0 || mUV[mFace[i].y].u == 0))
+			{
+				int found = 0, j;
+				for (j = 0; j < badverts; j++)
+				{
+					if (badverttable[j] == mFace[i].y && mUV[mFace[i].y].u == 0)
+						found = 1;
+					if (badverttable[j] == mFace[i].x && mUV[mFace[i].x].u == 0)
+						found = 1;
+				}
+				if (!found)
+				{
+					if (mUV[mFace[i].x].u == 0)
+						badverttable[badverts] = mFace[i].x;
+					if (mUV[mFace[i].y].u == 0)
+						badverttable[badverts] = mFace[i].y;
+					badverts++;
+				}
+			}
+
+			// x/z edges (vertex 0 and 2)
+			if ((fabs(mUV[mFace[i].x].u - mUV[mFace[i].z].u) > 0.5f) && (mUV[mFace[i].x].u == 0 || mUV[mFace[i].z].u == 0))
+			{
+				int found = 0, j;
+				for (j = 0; j < badverts; j++)
+				{
+					if (badverttable[j] == mFace[i].z && mUV[mFace[i].z].u == 0)
+						found = 1;
+					if (badverttable[j] == mFace[i].x && mUV[mFace[i].x].u == 0)
+						found = 1;
+				}
+				if (!found)
+				{
+					if (mUV[mFace[i].x].u == 0)
+						badverttable[badverts] = mFace[i].x;
+					if (mUV[mFace[i].z].u == 0)
+						badverttable[badverts] = mFace[i].z;
+					badverts++;
+				}
+			}
+
+			// y/z edges (vertex 1 and 2)
+			if ((fabs(mUV[mFace[i].y].u - mUV[mFace[i].z].u) > 0.5f) && (mUV[mFace[i].y].u == 0 || mUV[mFace[i].z].u == 0))
+			{
+				int found = 0, j;
+				for (j = 0; j < badverts; j++)
+				{
+					if (badverttable[j] == mFace[i].z && mUV[mFace[i].z].u == 0)
+						found = 1;
+					if (badverttable[j] == mFace[i].y && mUV[mFace[i].y].u == 0)
+						found = 1;
+				}
+				if (!found)
+				{
+					if (mUV[mFace[i].y].u == 0)
+						badverttable[badverts] = mFace[i].y;
+					if (mUV[mFace[i].z].u == 0)
+						badverttable[badverts] = mFace[i].z;
+					badverts++;
+				}
+			}
+		}
+		
+		// step 2: allocate more space for our new duplicate verts
+
+		fvec3 *nvert = new fvec3[mVertCount + badverts];
+		memcpy(nvert, mVert, sizeof(fvec3) * mVertCount);
+		delete[] mVert;
+		mVert = nvert;
+
+		fvec3 *nnorm = new fvec3[mVertCount + badverts];
+		memcpy(nnorm, mNormal, sizeof(fvec3) * mVertCount);
+		delete[] mNormal;
+		mNormal = nnorm;
+
+		fvec2 *nuv = new fvec2[mVertCount + badverts];
+		memcpy(nuv, mUV, sizeof(fvec2) * mVertCount);
+		delete[] mUV;
+		mUV = nuv;
+
+		// step 3: populate duplicate verts - otherwise identical except for U=1 instead of 0
+		
+		for (i = 0; i < badverts; i++)
+		{
+			mVert[mVertCount + i] = mVert[badverttable[i]];
+			mNormal[mVertCount + i] = mNormal[badverttable[i]];
+			mUV[mVertCount + i] = mUV[badverttable[i]];
+			mUV[mVertCount + i].u = 1.0f;
+		}
+
+		// step 4: fix faces
+		
+		for (i = 0; i < mFaceCount; i++)
+		{
+			// x/y edges (vertex 0 and 1)
+			if ((fabs(mUV[mFace[i].x].u - mUV[mFace[i].y].u) > 0.5f) && (mUV[mFace[i].x].u == 0 || mUV[mFace[i].y].u == 0))
+			{				
+				int found = 0, j;
+				for (j = 0; j < badverts; j++)
+				{
+					if (badverttable[j] == mFace[i].y && mUV[mFace[i].y].u == 0)
+						found = j;
+					if (badverttable[j] == mFace[i].x && mUV[mFace[i].x].u == 0)
+						found = j;
+				}
+				if (mUV[mFace[i].y].u == 0)
+					mFace[i].y = mVertCount + found;
+				if (mUV[mFace[i].x].u == 0)
+					mFace[i].x = mVertCount + found;
+			}
+
+			// x/z edges (vertex 0 and 2)
+			if ((fabs(mUV[mFace[i].x].u - mUV[mFace[i].z].u) > 0.5f) && (mUV[mFace[i].x].u == 0 || mUV[mFace[i].z].u == 0))
+			{
+				int found = 0, j;
+				for (j = 0; j < badverts; j++)
+				{
+					if (badverttable[j] == mFace[i].z && mUV[mFace[i].z].u == 0)
+						found = j;
+					if (badverttable[j] == mFace[i].x && mUV[mFace[i].x].u == 0)
+						found = j;
+				}
+				if (mUV[mFace[i].x].u == 0)
+					mFace[i].x = mVertCount + found;
+				if (mUV[mFace[i].z].u == 0)
+					mFace[i].z = mVertCount + found;
+			}
+
+			// y/z edges (vertex 1 and 2)
+			if ((fabs(mUV[mFace[i].y].u - mUV[mFace[i].z].u) > 0.5f) && (mUV[mFace[i].y].u == 0 || mUV[mFace[i].z].u == 0))
+			{
+				int found = 0, j;
+				for (j = 0; j < badverts; j++)
+				{
+					if (badverttable[j] == mFace[i].z && mUV[mFace[i].z].u == 0)
+						found = j;
+					if (badverttable[j] == mFace[i].y && mUV[mFace[i].y].u == 0)
+						found = j;
+				}
+				if (mUV[mFace[i].y].u == 0)
+					mFace[i].y = mVertCount + found;
+				if (mUV[mFace[i].z].u == 0)
+					mFace[i].z = mVertCount + found;				
+			}
+		}
+
+		// step 5: update vert count
+		mVertCount += badverts;
+
+		// and cleanup
+		delete[] badverttable;
 	}
 
 	void Tree::calcVertSizes(Branch *aBranch)
@@ -564,11 +733,11 @@ namespace Proctree
 				a = { v4, v2, v3 };
 				mFace[mFaceCount++] = (a);
 
-				mUV[(i + segOffset) % segments] = { abs(i / (float)segments - 0.5f) * 2, 0 };
+				mUV[(i + segOffset) % segments] = { i / (float)segments, 0 };
 
 				float len = length(sub(mVert[aBranch->mRing0[i]], mVert[aBranch->mRootRing[(i + segOffset) % segments]])) * mProperties.mVMultiplier;
-				mUV[aBranch->mRing0[i]] = { abs(i / (float)segments - 0.5f) * 2, len };
-				mUV[aBranch->mRing2[i]] = { abs(i / (float)segments - 0.5f) * 2, len };
+				mUV[aBranch->mRing0[i]] = { i / (float)segments, len };
+				mUV[aBranch->mRing2[i]] = { i / (float)segments, len };
 			}
 		}
 
@@ -660,9 +829,9 @@ namespace Proctree
 				mFace[mFaceCount++] = (a);
 
 				float len = length(sub(mVert[aBranch->mChild0->mEnd], mVert[aBranch->mRing1[i]]));
-				mUV[aBranch->mChild0->mEnd] = { abs(i / (float)segments - 1 - 0.5f) * 2, len * mProperties.mVMultiplier };
+				mUV[aBranch->mChild0->mEnd] = { i / (float)segments - 1, len * mProperties.mVMultiplier };
 				len = length(sub(mVert[aBranch->mChild1->mEnd], mVert[aBranch->mRing2[i]]));
-				mUV[aBranch->mChild1->mEnd] = { abs(i / (float)segments - 0.5f) * 2, len * mProperties.mVMultiplier };
+				mUV[aBranch->mChild1->mEnd] = { i / (float)segments, len * mProperties.mVMultiplier };
 			}
 		}
 	}
