@@ -289,8 +289,9 @@ void draw_imgui()
 		ImGui::InputInt("Random seed", &gTree.mProperties.mSeed);
 		ImGui::InputInt("Branch segments", &gTree.mProperties.mSegments, 2);
 		CLAMP(gTree.mProperties.mSegments, 2, 32);	
+		gTree.mProperties.mSegments &= ~1; // make sure we step by 2
 		ImGui::InputInt("Branch levels", &gTree.mProperties.mLevels);
-		CLAMP(gTree.mProperties.mLevels, 3, 32);
+		CLAMP(gTree.mProperties.mLevels, 1, 10);
 		ImGui::InputInt("Trunk forks", &gTree.mProperties.mTreeSteps);
 		CLAMP(gTree.mProperties.mTreeSteps, 0, 32);
 		ImGui::SliderFloat("Texture V multiplier", &gTree.mProperties.mVMultiplier, 0.01f, 10.0f, "%.3f", 4.0f);
@@ -390,10 +391,10 @@ void draw_imgui()
 		int i;
 		for (i = 0; i < 8; i++)
 		{
-			ImGui::Image((ImTextureID)tex_preset[0], previewsize);
+			ImGui::Image((ImTextureID)tex_preset[i], previewsize);
 			char temp[80];
 			sprintf(temp, "Load preset %d", i + 1);
-			if (ImGui::Button("Load preset 1"))
+			if (ImGui::Button(temp))
 			{
 				loadpreset(i);
 			}
@@ -492,8 +493,6 @@ void draw_screen()
 		}
 	}
 
-	draw_imgui();
-
     int i;    
 
     if (tick - gLastTick > TICK_TIMEWARP) 
@@ -511,6 +510,8 @@ void draw_screen()
 
         gLastTick += 1000 / PHYSICS_FPS;
     }
+
+	draw_imgui();
 
     ////////////////////////////////////
     // Rendering

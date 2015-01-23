@@ -8,7 +8,7 @@ see http://snappytree.com for an online demonstration of the original proctree.j
 ## Binaries
 
 Download win32 binaries at:
-http://iki.fi/sol/zip/happytree_20150119.zip
+http://iki.fi/sol/zip/happytree_20150123.zip
 
 Additional (not mandatory) 400 megs of trunk / twig textures
 http://iki.fi/sol/zip/happytree_20150118_tex.zip

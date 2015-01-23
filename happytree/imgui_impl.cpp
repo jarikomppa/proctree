@@ -262,8 +262,14 @@ void UpdateImGui()
 
 	if (gUIState.scroll)
 	{
-		io.MouseWheel += (float)gUIState.scroll * 0.2f;
+		io.MouseWheel += (float)gUIState.scroll * 0.5f;
 		gUIState.scroll = 0;
+	}
+
+	if (gUIState.keychar)
+	{
+		io.AddInputCharacter(gUIState.keychar);
+		gUIState.keychar = 0;
 	}
 
 	// Start the frame
