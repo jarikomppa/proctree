@@ -82,7 +82,7 @@ void main()
             shade += getshadowsample(temp);
         }
         shade = shade / 16.0;
-        shade = (2.0 + shade) / 3.0;
+        shade = (1.0 + shade) / 2.0;
          
         s = vec4(shade,shade,shade,1);
     }
