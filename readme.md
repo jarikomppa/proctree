@@ -2,8 +2,10 @@
 
 This is a liberally licensed procedural tree generator in c++, along with an editor HappyTree.
 
+[![Quick walkthrough of 20150123 version](http://img.youtube.com/vi/XLBvkVMxdS0/0.jpg) (youtube video)](http://www.youtube.com/watch?v=XLBvkVMxdS0) 
+
 The procedural generation itself is a port from https://github.com/supereggbert/proctree.js/
-see http://snappytree.com for an online demonstration of the original proctree.js (with webgl).
+see http://snappytree.com for an online demonstration of the original proctree.js (with webgl). The c++ port is several orders of magnitude faster than the original, and also fixes the UV mapping.
 
 ## Binaries
 
@@ -13,7 +15,9 @@ http://iki.fi/sol/zip/happytree_20150123.zip
 Additional (not mandatory) 400 megs of trunk / twig textures
 http://iki.fi/sol/zip/happytree_20150118_tex.zip
 
-If you opt to download the additional textures, just unzip both zips in the same place. HappyTree will work without the additional textures (it'll actually be faster), so if you're just trying it out, I recommend NOT downloading the additional stuff. All of the textures are CC0 / public domain material (primarily, if not completely, by nobiax.deviantart.com). The additional textures do let you make more varieties of trees though; the base package only comes with one trunk and twig texture.
+If you opt to download the additional textures, just unzip both zips in the same place. HappyTree will work without the additional textures (it'll actually be faster), so if you're just trying it out, I recommend NOT downloading the additional stuff.
+
+All of the textures are CC0 / public domain material (primarily, if not completely, by nobiax.deviantart.com). The additional textures do let you make more varieties of trees though; the base package only comes with one trunk and twig texture.
 
 The happytree editor requires OpenGL 3.3, but seriously, who doesn't have that?
 
