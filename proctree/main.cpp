@@ -25,7 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <Windows.h>
+#include <chrono>
 #include "proctree.h"
 
 void benchmark()
@@ -36,15 +36,16 @@ void benchmark()
 	int j;
 	for (j = 0; j < 10; j++)
 	{
-		int start = GetTickCount();
+		std::chrono::time_point<std::chrono::system_clock> start, end;
+		start = std::chrono::system_clock::now();
 		int i;
 		for (i = 0; i < n; i++)
 		{
 			tree.generate();
 		}
-		int end = GetTickCount();
-		float sec = (end - start) / 1000.0f;
-		printf("%3.3fs (%3.3f trees per second)\n", sec, n / sec);
+		end = std::chrono::system_clock::now();
+		std::chrono::duration<double> sec = end-start;
+		printf("%3.3fs (%3.3f trees per second)\n", sec.count(), n / sec.count());
 	}
 }
 

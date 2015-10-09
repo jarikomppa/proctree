@@ -166,4 +166,4 @@ namespace Proctree
 	fvec3 cross(fvec3 a, fvec3 b);
 	fvec3 normalize(fvec3 a);
 	float length(fvec3 a);
-};
+}
