@@ -1,0 +1,8 @@
+By submitting changes to this project I give up all the rights
+to the changes, and agree that the code will be freely available
+under the licenses listed in the source files.
+
+Authors:
+- Paul Brunt - http://paulbrunt.co.uk/
+- Jari Komppa - http://iki.fi/sol/
+
