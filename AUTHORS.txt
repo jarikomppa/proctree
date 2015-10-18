@@ -5,4 +5,5 @@ under the licenses listed in the source files.
 Authors:
 - Paul Brunt - http://paulbrunt.co.uk/
 - Jari Komppa - http://iki.fi/sol/
+- Jett LaRue - whackashoe@gmail.com
 
